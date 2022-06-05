@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="ProjectModuleManager">
-    <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/StreetFeed.iml" filepath="$PROJECT_DIR$/.idea/StreetFeed.iml" />
-      <module fileurl="file://$PROJECT_DIR$/Codigo/backend/streetfeed/streetfeed.iml" filepath="$PROJECT_DIR$/Codigo/backend/streetfeed/streetfeed.iml" />
-    </modules>
-  </component>
-</project>
