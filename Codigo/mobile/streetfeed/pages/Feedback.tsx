@@ -1,22 +1,46 @@
 import { Dimensions, Pressable, StyleSheet, Text, View } from "react-native";
 import { useRouter } from "../components/routes/Router";
 
-export function Feedback(){
-    const { goBack } = useRouter();
+import { FontAwesome } from '@expo/vector-icons';
+import ViewFeedback from "./feedback/ViewFeedback";
+import CreateFeedback from "./feedback/CreateFeedback";
+
+export function Feedback() {
+
+    const { goBack, route } = useRouter();
+    const idFeedback: string | undefined = route.split("/")[1];
+    
     return (
-        <View style={styles.container}>
-            <Pressable onPress={goBack}>
-                <Text>Feedback</Text>
-            </Pressable>
+        <View>
+            <View style={styles.header}>
+                <Pressable onPress={goBack}>
+                    <FontAwesome
+                        name="arrow-left"
+                        color="#FFF"
+                        size={30}
+                    />
+                </Pressable>
+            </View>
+            {
+                (idFeedback && !isNaN(Number(idFeedback))) ? (
+                    <ViewFeedback 
+                        idFeedback={Number(idFeedback)}
+                    />
+                ) : (
+                    <CreateFeedback />
+                )
+            }
         </View>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        alignItems: 'center',
-        justifyContent: 'center',
+    header: {
+        height: 50,
         width: Dimensions.get('window').width,
-        height: Dimensions.get('window').height,
+        flexDirection: "row",
+        backgroundColor: '#00A86B',
+        alignItems: 'center',
+        padding: 10
     }
 })

@@ -6,10 +6,19 @@ import { StatusBar } from 'expo-status-bar';
 import { Feedback } from './pages/Feedback';
 import { Profile } from './pages/Profile';
 
-const routes: Record<EnumRoutes, ( () => React.ReactNode )> = {
-  map: MapPage,
-  feedback: Feedback,
-  profile: Profile,
+function getComponent(route: EnumRoutes){
+  if (route.includes("feedback") ){
+    return Feedback
+  }
+  else if (route === "map"){
+    return MapPage
+  }
+  else if (route === "profile"){
+    return Profile
+  }
+  else {
+    return MapPage
+  }
 }
 
 export default function App() {
@@ -17,7 +26,7 @@ export default function App() {
     <>
       <StatusBar hidden/>
       <Router children={route => {
-        const Component = routes[route];
+        const Component = getComponent(route);
         return <Component/>;
       }}/>
     </>

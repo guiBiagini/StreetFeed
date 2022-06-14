@@ -1,11 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View, Dimensions, Text, Button } from 'react-native';
+import { StyleSheet, View, Dimensions, Text, Button, Pressable } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import { Feather, FontAwesome } from '@expo/vector-icons';
 
 import MapView, { Marker, Callout, PROVIDER_GOOGLE, EventUserLocation, Region } from 'react-native-maps';
 import { useRouter } from '../components/routes/Router';
 import { getCurrentPositionAsync, LocationObjectCoords, useForegroundPermissions } from 'expo-location';
+import { mapCustomStyles } from '../utils/mapUtils';
+import { usePosition } from '../hooks/usePosition';
+import { useListaFeedbacks } from '../services/feedbackServices';
 
 export default function MapPage() {
   const [locationStatus, requestLocation] = useForegroundPermissions();
@@ -18,6 +21,8 @@ export default function MapPage() {
   if (locationStatus?.granted) {
     return <MapPageComponent />
   }
+  else if (!locationStatus)
+    return <View></View>
   else {
     return (
       <View style={styles.requestPermitionContainer}>
@@ -31,31 +36,22 @@ export default function MapPage() {
 
 }
 
-function usePosition() {
-  const [coords, setCoords] = useState<LocationObjectCoords>();
-  useEffect(() => {
-    getCurrentPositionAsync().then((pos) => {
-      setCoords(pos.coords);
-    })
-  }, []);
-
-  return coords;
-}
-
 function MapPageComponent() {
-  const [ followUserLocation, setFollowUserLocation ] = useState(true);
+  const [followUserLocation, setFollowUserLocation] = useState(true);
 
   const navigation = useRouter();
   const map = useRef<MapView>(null);
-  
+
   const userCoords = usePosition();
 
-  const [ region, setRegion ] = useState<Region>({
+  const regionRef = useRef<Region>({
     latitude: userCoords?.latitude ?? -19.9331392,
     longitude: userCoords?.longitude ?? -43.9370872,
     latitudeDelta: 0.002,
     longitudeDelta: 0.002,
   });
+
+  const lstFeedbacks = useListaFeedbacks();
 
   function handleProfileClick() {
     navigation.navigate("profile");
@@ -65,33 +61,39 @@ function MapPageComponent() {
     navigation.navigate("feedback");
   }
 
+  function handleCalloutButtonClick(idFeedback: number) {
+    navigation.navigate(`feedback/${idFeedback}`);
+  }
+
   const userLocationChanged = (event: EventUserLocation) => {
-    if (followUserLocation){
+    if (followUserLocation) {
       const newRegion = event.nativeEvent.coordinate;
       const regionObj = {
-        ...region,
+        ...regionRef.current,
         latitude: newRegion.latitude,
         longitude: newRegion.longitude,
       };
-      setRegion(regionObj);
+      regionRef.current = (regionObj);
 
       animateToRegion(regionObj);
     }
   }
 
   const animateToRegion = (region: Region) => {
-    map.current?.animateToRegion({latitude: region.latitude, longitude: region.longitude,
-        latitudeDelta: region.latitudeDelta, longitudeDelta: region.longitudeDelta}, 1000);
+    map.current?.animateToRegion({
+      latitude: region.latitude, longitude: region.longitude,
+      latitudeDelta: region.latitudeDelta, longitudeDelta: region.longitudeDelta
+    }, 1000);
   }
 
   const regionChanged = (region: Region) => {
-    if (followUserLocation){
-      setRegion({
-          longitudeDelta: region.longitudeDelta,
-          latitudeDelta: region.latitudeDelta,
-          latitude: region.latitude,
-          longitude: region.longitude
-        });
+    if (followUserLocation) {
+      regionRef.current = ({
+        longitudeDelta: region.longitudeDelta,
+        latitudeDelta: region.latitudeDelta,
+        latitude: region.latitude,
+        longitude: region.longitude
+      });
 
     }
   }
@@ -100,7 +102,7 @@ function MapPageComponent() {
     setFollowUserLocation(false);
     return false;
   }
-  
+
 
 
   return (
@@ -116,81 +118,62 @@ function MapPageComponent() {
         onUserLocationChange={(event) => followUserLocation && userLocationChanged(event)}
         onRegionChange={regionChanged}
         followsUserLocation={followUserLocation}
-        
+
         onMoveShouldSetResponder={onDrag}
 
-        customMapStyle={[
-          {
-            elementType: "labels",
-            stylers: [
-              {
-                visibility: "off"
-              }
-            ]
-          },
-          {
-            featureType: "administrative.land_parcel",
-            stylers: [
-              {
-                visibility: "off"
-              }
-            ]
-          },
-          {
-            featureType: "administrative.neighborhood",
-            stylers: [
-              {
-                visibility: "off"
-              }
-            ]
-          }
-        ]}
+        customMapStyle={mapCustomStyles}
         style={styles.mapStyle}
-        region={region}
+        region={regionRef.current}
       >
-        <Marker
-          coordinate={{
-            latitude: -19.9331390,
-            longitude: -43.9370870
-          }}
-        >
-          <View>
-            <FontAwesome color="#c80815" size={35} name="exclamation"/>
-          </View>
-          <Callout tooltip={true} onPress={() => { }}>
-            <View style={styles.calloutContainer}>
-              <Text style={styles.calloutText}>Buraco</Text>
-              <View style={styles.likesSpan}>
-                <Feather name='heart' />
-                <Text>8</Text>
+        {
+          lstFeedbacks.map(feedback => (
+            <Marker
+              coordinate={{
+                latitude: Number(feedback.y),
+                longitude: Number(feedback.x)
+              }}
+              key={feedback.id_feedback}
+            >
+              <View>
+                <FontAwesome color="#c80815" size={35} name="exclamation-triangle" />
               </View>
-            </View>
-          </Callout>
-        </Marker>
+              <Callout tooltip={true} onPress={() => handleCalloutButtonClick(feedback.id_feedback)}>
+                <View style={styles.calloutContainer}>
+                  <Text style={styles.calloutText}>{feedback.tipo}</Text>
+                  <View style={styles.likesSpan}>
+                    <Feather name='heart' />
+                    <Text>{feedback.score}</Text>
+                  </View>
+                </View>
+              </Callout>
+            </Marker>
+          ))
+        }
       </MapView>
 
-      <View style={styles.profileContainer}>
+      {/* <View style={styles.profileContainer}>
         <Button
           onPress={handleProfileClick}
           title="Perfil"
         />
-      </View>
+      </View> */}
 
       <View style={styles.addFeedbackContainer}>
-        <Button
-          onPress={handleAddButtonClick}
-          title="Adicionar"
-          color="#00A86B"
-        />
+        <Pressable onPress={handleAddButtonClick}>
+          <RectButton style={styles.addFeedbackButton}>
+            <Feather name='plus' color="#FFF" size={35} />
+          </RectButton>
+        </Pressable>
       </View>
 
       <View style={styles.followContainer} >
-        <Button
-          onPress={()=>setFollowUserLocation(true)}
-          title="Seguir"
-          color="#AC6AB9"
-        />
+        <Pressable onPress={() => setFollowUserLocation(true)}>
+          <RectButton style={styles.followButton}>
+            <FontAwesome name='street-view' color="#FFF" />
+          </RectButton>
+        </Pressable>
       </View>
+
     </View>
   );
 }
